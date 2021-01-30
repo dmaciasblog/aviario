@@ -2,7 +2,6 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
-//#include <RTClib.h>
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 
@@ -11,7 +10,7 @@
 #define Boton 3
 
 DHT dht(DHTPIN, DHTTYPE);
-LiquidCrystal_I2C lcd(0x27, 20, 4 );// 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  //seteamos el lcd
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  //seteamos el lcd
 RTC_DS3231 rtc;
 
 String daysOfTheWeek[7] = { "Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado" };
@@ -20,22 +19,29 @@ String monthsNames[12] = { "Enero", "Febrero", "Marzo", "Abril", "Mayo",  "Junio
  int inicio = 1;
  int estadoAC = 0;
  int estadoAN = 0;
+const int led2 = 8;
+byte dim_led2 = 255;
+byte dim2;
 const int led1 = 6;
 byte dim_led1 = 255;
 byte dim;
 long tiempo = 7031;
 long tiempo2 =1000;
 long previousMillis = 0;
-unsigned long currentMillis;
+long currentMillis;
 long tiempoUltimeLectura=0;
+//int h = ( now.hour() );
+//int m = ( now.minute() );
 
 void setup() {
 
   lcd.begin(20,4);
   dht.begin();
   pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
   pinMode(Boton, INPUT);
   dim = 0;
+  dim2 = 0;
 
   if (!rtc.begin()) {
      Serial.println(F("Couldn't find RTC"));
@@ -45,6 +51,9 @@ void setup() {
   if (rtc.lostPower()) {
      // Fijar a fecha y hora de compilacion
      rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
+     // January 21, 2014 at 3am you would call:
+     //rtc.adjust(DateTime(2021, 1, 30, 11, 14, 0));
   }
 
 
@@ -161,9 +170,23 @@ void loop() {
 /////////////////////////////////////////
 ///  HORARIOS EVENTOS
 /////////////////////////////////////////
-float hours = now.hour() + ( now.minute() / 60.0);
+int hours = ( (now.hour() * 60 ) + (now.minute()) );
+int hours2 = ( (now.hour() * 60 ) + (now.minute()) );
+    if (now.month() == 1 ){
+        if ( now.day() == 30 ) {
+            if ( hours < 449 ){
+                luna();
+            }
+            if (hours >= 449 && hours <= 479) {
+                alba();  // funcion que amanece la linea 1
+            }
+            if (hours2 >= 469 && hours2 <= 499) { //tengo que poner el rango x si se va la luz o algo
+                albaH(); // funcion que amanece la linea 2
+            }
+        }
+    }
 
-//  --- DIA 11 ENERO
+/*  --- DIA 11 ENERO
         if(now.day() == 11 ){
             if(hours > 7.42 && hours < 8.07){
                 alba();
@@ -663,13 +686,20 @@ float hours = now.hour() + ( now.minute() / 60.0);
 
 
 //  --- DIA 30 ENERO
-        if(now.day() == 30 ){
-            if(hours >= 7.00 && hours <= 7.50){
-                lcd.backlight();
-                lcd.setCursor(13,2);
-                lcd.print(hours);
+/*        if(now.day() == 30 ){
+            if( now.hour() == 13 && now.minute() == 03 ){
+            //if(hours >= 11 && hours <= 7.50){
+                //lcd.backlight();
+                //lcd.setCursor(13,2);
+                //lcd.print(hours);
                 alba();
             }
+            if( now.hour()== 13 && now.minute() == 06 ){
+                //lcd.setCursor(13,2);
+                //lcd.print("amaH");
+                albaH();
+            }
+
             if(hours > 7.50 && hours < 21.00){
                 lcd.setCursor(13,2);
                 lcd.print(hours);
@@ -681,7 +711,7 @@ float hours = now.hour() + ( now.minute() / 60.0);
                 ocaso();
             }
             if((hours >= 0.0 && hours < 7.00) || (hours > 21.50)){
-                lcd.noBacklight();
+            //    lcd.noBacklight();
                 lcd.setCursor(13,2);
                 lcd.print(hours);
                 luna();
@@ -740,7 +770,7 @@ float hours = now.hour() + ( now.minute() / 60.0);
                 lcd.print(hours);
                 luna();
             }
-       }
+       }*/
 }
 
  //--------------------------------------
@@ -764,7 +794,7 @@ void alba(){
     if ( dim < dim_led1 )
     {
       dim += 1;
-      lcd.setCursor(3,2);
+      lcd.setCursor(0,2);
       lcd.print("dim: ");
       lcd.print((int)dim);
 
@@ -775,8 +805,8 @@ void alba(){
       }
 
     analogWrite( led1, dim );
-    lcd.setCursor(5,3);
-    lcd.print("AMANECER");
+    lcd.setCursor(0,3);
+    lcd.print("AMANECE1");
     if (dim == 255){
       lcd.setCursor(0,2);
       rline();
@@ -784,6 +814,46 @@ void alba(){
       rline();
       lcd.setCursor(6,3);
       lcd.print("LUZ  DIA");
+    }
+   }
+  }
+}
+
+
+
+///////////////////////////////
+////// prueba segundo led
+///////////////////////////////
+
+void albaH(){
+//Data d = rtc.getData();
+  currentMillis = millis();
+  if(currentMillis - previousMillis > tiempo)
+  {
+    previousMillis = currentMillis;
+    if ( dim2 < dim_led2 )
+    {
+      dim2 += 1;
+      lcd.setCursor(12,2);
+      lcd.print("dim: ");
+      lcd.print((int)dim2);
+
+      if (dim2 >= dim_led2){
+        dim2 = dim_led2;
+
+
+      }
+
+    analogWrite( led2, dim2 );
+    lcd.setCursor(10,3);
+    lcd.print("AMANECER2");
+    if (dim2 == 255){
+      lcd.setCursor(0,2);
+      rline();
+      lcd.setCursor(0,3);
+      rline();
+      lcd.setCursor(6,3);
+      lcd.print("DIA");
     }
    }
   }
